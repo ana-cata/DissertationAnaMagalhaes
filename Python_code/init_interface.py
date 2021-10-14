@@ -1,11 +1,23 @@
-############################ imports ##########################################
+# Dissertation Biomedical Engineering
+# 2020/2021
+# Ana Catarina Monteiro Magalhães
+#
+# Water temperature and zebrafish vital signs Monitoring software
+
+# File: init_interface.py
+# Date: 06-09-2021
+
+# Description: This script receives the data sent by the Arduino Uno and processes
+# that information. Then, this information is displayed on QT inteface. In this
+# script it is also receuves information from the webcam and it is also displayed
+# on the QT interface.
+
+############################ imports ###########################################
 import serial
 from serial.tools import list_ports
-
 import scipy.signal as signal
 from scipy.signal import find_peaks
 from scipy.optimize import curve_fit
-
 import os
 import sys
 import pandas as pd
@@ -14,75 +26,76 @@ import time
 import random
 import cv2
 import math
+import multiprocessing
+from multiprocessing import Process, Queue, Pipe, Event
 
 from PyQt5 import QtWidgets, QtCore, QtGui, uic
 from PyQt5.QtWidgets import QWidget, QLabel, QApplication, QVBoxLayout
 from PyQt5.QtGui import QImage, QPixmap
 from PyQt5.QtCore import pyqtSignal, QObject, Qt
 
-#importing classes form others files
-from teste import Ui_MainWindow
-from cameraacquisition import CameraAcquisition
-
-import multiprocessing
-from multiprocessing import Process, Queue, Pipe, Event
-
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas # se quiserem usar o matplotlib
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
-########################### imports #######################################
 
+#importing classes form others files
+from mainwindow import Ui_MainWindow            # Estabilish comunication between
+                                                # Qt and the python script.
+from cameraacquisition import CameraAcquisition # File with the camera process
+                                                # and threads.
+
+################################################################################
+
+# File names
 timestr = time.strftime("%Y%m%d-%H%M%S")
-csvname = timestr + '.csv'     # File to save the original data
-aviname = timestr + '.avi'    # Video file name
+csvname = timestr + '.csv'      # File to save the original sensors data
+aviname = timestr + '.avi'      # Video file name
+
+# Sampling period
 ta = 0.01
+
+# Number of samples   for 10 s
 samples_10s = int((10/ta)-1)
 
-#Erro: não se fecha o processo na thread tem de se enviar um sinal para terminar
-
-# parent_dir = r"C:\\Users\User\\Documents\\Universidade\\5ºano\\Dissertacao\\Python_p\\exemplomultipprocessing9"
-# path = os.path.join(parent_dir, timestr)
-# if not os.path.exists(path):
-#     os.mkdir(path)
-#     filename = os.path.join(path, csvname)
-#     videoname = os.path.join(path, aviname)
-
+# Interface - T1
 class StartGUI(Ui_MainWindow):
     def __init__(self, window):
-        Ui_MainWindow.__init__(self)    # Carrega o ficheiro da interface (parte dos desenhos)
+        Ui_MainWindow.__init__(self)                # Load interface file
         self.setupUi(window)
         self.custom_signals = CustomSignalsClass()
         SignalsConnection.__init__(self)
         self.custom_signals.update_value_in_label_trigger.emit("None")
         self.window = window
 
-        init_plot.__init__(self)
+        init_plot.__init__(self) # Updates the graphic present in the interface
         self.cameraacquisition_class = CameraAcquisition(stop_event_cam, camera_is_recording)
         self.cameraacquisition_class.imageReady.connect(self._update_camera_image)
 
     def start_acquisition(self):
+        # Stop the events and the the threads
         if self.pushButton.isChecked() == False:
             stop_event.set()
             stop_event_cam.set()
             self.cameraacquisition_class.stop()
             print('STOP')
 
+        # Start the Arduino thread and the camera thread
         else:
-
-            #AQUI criar pasta e diretorio da pasta
-            #AQUI criar nome do ficheiro e entrar como argumento do ArduinoNewAcquisition e cameraacquisition_class
             self.arduino_acquisitionthread = ArduinoNewAcquisition(self.custom_signals, self.pushButton.isChecked())
             self.cameraacquisition_class.start()
             print('START')
 
+    # Updates the interface with the new values of water temperature and heart rate
     def update_values(self, string_input):
         self.label.setText(string_input)
 
+    # Updates the interface with the new frame
     def _update_camera_image(self):
         self.label_image.setPixmap(QPixmap.fromImage(self.cameraacquisition_class.image))
 
+# Class to update the graph that shows the reading of the heartbeat sensors
 class init_plot:
     def __init__(self):
         self.figure_images = plt.figure()
@@ -108,7 +121,8 @@ class init_plot:
         self.canvas_images.flush_events()
         self.ax.cla()
 
-class WorkingProcessor: #P2 - Acquire data from arduino
+# P2 - Receives data from Arduino Uno
+class WorkingProcessor:
     def __init__(self, transferdata, stop_event, camera_is_recording):
         self.transferdata = transferdata
         self.stop_event = stop_event
@@ -117,7 +131,7 @@ class WorkingProcessor: #P2 - Acquire data from arduino
         self.serial_reading_process()
 
     def serial_reading_process(self):
-        #Open Serial to comunicate with arduito
+        #Open Serial to comunicate with Arduino Uno
         ser = serial.Serial()
         port = self._check_connected_equipment()
         print(port)
@@ -126,24 +140,35 @@ class WorkingProcessor: #P2 - Acquire data from arduino
         ser.open()
         ser.flushInput()
 
-        # Acquisition of data from arduino
+        # Data acquisition from the Arduino Uno
         while self.stop_event.is_set() == False:
             x = []
+            # Waits until there is 3 elements in the serial
             while len(x) != 3:
+                # Read a '\n' terminated line
                 ser_bytes = ser.readline()
                 decoded_bytes = ser_bytes[0:len(ser_bytes) - 2].decode("utf-8")
                 x = decoded_bytes.split(',')
 
-            if self.camera_is_recording.is_set(): # Evento fica True quando recebemos o primeiro frame da camera
+            # self.camera_is_recording is an event that stays True when the
+            # first frame from the webcam is received.
+            if self.camera_is_recording.is_set():
+                # Data received from Arduino Uno is saved to a file when the first
+                # frame is recieved.
                 with open(csvname, "a") as f:
+                    # The first column has the time, the second column has the heart
+                    # rate sensors readings and the third column has the thermistors
+                    # readings.
                     f.write('%.2f,%d,%.2f \n' % (float(x[2]), float(x[0]), float(x[1])))
 
             datatosend = x
             print("P2 send {}".format(datatosend))
-            self.transferdata.put(datatosend) # Sending raw data read from Arduino
+            self.transferdata.put(datatosend)   # Sends raw data read from Arduino
+                                                # to the main process.
 
         ser.close()
 
+    # Check if the serial port is available
     def _check_connected_equipment(self):
         ports_available = list(list_ports.comports())
         fishy_port = []
@@ -153,29 +178,38 @@ class WorkingProcessor: #P2 - Acquire data from arduino
                 fishy_port.append(port)
         return fishy_port
 
+# Data filter
 class Filter_ArduinoData:
     def __init__(self, data):
         self.data = data
-
     def filter_data(self):
-        N = 2  # Filter order
-        Wn = [0.008, 0.07]  # Cutoff frequency
+        # Filter order
+        N = 2
+         # Cutoff frequency
+        Wn = [0.008, 0.07]
+        # Butterworth  bandpass filter
         B, A = signal.butter(N, Wn, 'bandpass', output='ba')
+        # Apply the filtar to the data received by the Arduino
         smooth_data = signal.filtfilt(B, A, self.data)
         return smooth_data
 
+# Heart Rate calculation
 class Calculate_Heartbeat:
     def __init__(self, t, filtered):
         self.filtered = filtered
         self.t = t
 
+
     def findpeaks(self):
         peaks, _ = find_peaks(self.filtered, height = 0.4, distance = 20,
-                                threshold = 0.005)  # Retorna os indices dos picos
+                        threshold = 0.005)  # Returns the indices of the peaks
+
         heart_beat = []
         for n in range(len(peaks) - 1):
+            # Time distance between two consecutive peaks
             delta_t = self.t[peaks[n + 1]] - self.t[peaks[n]]
             if delta_t < 1.5:
+                # Conversion the heart rate to beats per minute (bpm)
                 f_min = 60/delta_t
                 heart_beat.append(f_min)
             else:
@@ -194,37 +228,46 @@ class ArduinoNewAcquisition():
         self.thread_start_acquisition = GenericThread(self.start_acquisition2thread)
         self.thread_start_acquisition.start()
 
-    def start_acquisition2thread(self): # T2
+    # T2
+    def start_acquisition2thread(self):
         t = []
         a =[]
         heart_beat = []
         T = []
 
-        transferdata = Queue()  # Communication channel between processes
+        transferdata = Queue()  # Communication channel between processes (P1 and P2)
 
         global process_reading_data_acquisition
+
+        # Booting process P2
         process_reading_data_acquisition = Process(target=WorkingProcessor,
                                                    args=( transferdata,stop_event, camera_is_recording))
         process_reading_data_acquisition.start()
 
         n = 0
         while stop_event.is_set() == False:
-            # Receção de dados brutos
             datareceive = transferdata.get() # P2 data reception - arduino raw data
             n += 1
             t.append(float(datareceive[2]))     # Time
-            a.append(float(datareceive[0]))     # Amplitude
-            T.append(float(datareceive[1]))     # Temperature
+            a.append(float(datareceive[0]))     # Hear beat reading
+            T.append(float(datareceive[1]))     # Temperature reading
 
             if len(t) > samples_10s:
-                data_filter = Filter_ArduinoData(a[-samples_10s:]).filter_data()    # Arduino raw data filtering
-                p = Calculate_Heartbeat(t[-samples_10s:], data_filter)              # Calculation of heart rate
-                temperature = round(sum(T[-samples_10s:])/float(len(T[-samples_10s:])),2)# Mean of the last 200 temperature readings of the thermistor
+                # Arduino raw data filtering
+                data_filter = Filter_ArduinoData(a[-samples_10s:]).filter_data()
+                # Calculation of heart rate
+                p = Calculate_Heartbeat(t[-samples_10s:], data_filter)
+                # Mean of the last 10 s of temperature readings of the thermistor
+                temperature = round(sum(T[-samples_10s:])/float(len(T[-samples_10s:])),2)
 
                 if n % int(0.25/ta) == 0:
+                    # Normalization of the data
                     data_filter = data_filter/max(data_filter)
-                    self.custom_signals.trigger.emit(t[-samples_10s:], [data_filter]) # Sending data to init_plot function (T1 - interface)
-                if n % int(2.5/ta) == 0: # de 2,5s em 2,5s o valor do batimento cardíaco e temperatura é atualizado
+                     # Sending data to init_plot function (T1 - interface)
+                    self.custom_signals.trigger.emit(t[-samples_10s:], [data_filter])
+                if n % int(2.5/ta) == 0:
+                    # Sending the updated values of heart rate and water temperature
+                    # to T1 (interface)
                     self.custom_signals.update_value_in_label_trigger.emit("{} bpm \n\n{} ºC".format(p.findpeaks(),temperature)) # Upadate the hear beat and temperature values in the GUI
 
         process_reading_data_acquisition.join()
@@ -233,8 +276,10 @@ class ArduinoNewAcquisition():
 
 class CustomSignalsClass(QObject):
     # Define new signals.
+    # Signal to sent the values of heart rate e water temperature to T1
     update_value_in_label_trigger = pyqtSignal(str)
-    trigger = pyqtSignal(list, list) # sinal para enviar dados filtrados para o init_plot
+    # Signal to send filtered data to the class init_plot
+    trigger = pyqtSignal(list, list)
 
 class SignalsConnection:
     def __init__(self):
@@ -269,6 +314,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
         quit_msg = "Are you sure you want to Exit the software?"
         warning_msg = "WARNING: Acquisition is still running, \n please stop before leave the program!"
 
+# Main Process P1
 if __name__ == "__main__":
     multiprocessing.freeze_support()
 
