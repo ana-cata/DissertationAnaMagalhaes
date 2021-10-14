@@ -3,7 +3,8 @@
  *  2020/2021 
  *  Ana Catarina Monteiro Magalhães 
  *  
- *  Water temperature and zebrafish vital signs Monitoring software
+ *  Water temperature and zebrafish vital signs monitoring Firmware
+ *  
  *  File: sensors.ino
  *  Date: 06-09-2021
  *  
