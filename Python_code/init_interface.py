@@ -1,17 +1,17 @@
-# Dissertation Biomedical Engineering
+# Dissertation - Biomedical Engineering
 # 2020/2021
 # Ana Catarina Monteiro Magalhães
 #
 # Water temperature and zebrafish vital signs Monitoring software
-
+#
 # File: init_interface.py
 # Date: 06-09-2021
-
+#
 # Description: This script receives the data sent by the Arduino Uno and processes
 # that information. Then, this information is displayed on QT inteface. In this
-# script it is also receuves information from the webcam and it is also displayed
+# script it is also receives information from the webcam and it is also displayed
 # on the QT interface.
-
+#
 ############################ imports ###########################################
 import serial
 from serial.tools import list_ports

@@ -1,3 +1,15 @@
+# Dissertation - Biomedical Engineering
+# 2020/2021
+# Ana Catarina Monteiro Magalhães
+#
+# Water temperature and zebrafish vital signs Monitoring software
+#
+# File: cameraacquisition.py
+# Date: 06-09-2021
+#
+# Description: This script receives the data sent by webcam and processes
+# that information. Then, this information is sent to be displayed on QT inteface.
+#
 ############################ imports ##########################################
 import serial
 from serial.tools import list_ports
