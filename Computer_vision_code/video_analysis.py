@@ -18,7 +18,7 @@ from scipy import stats
 import numpy as np
 
 ###############################################################################
-# Upload of the interst video
+# Video upload
 video_name = '454-472-peixe2.MOV'
 cap = cv2.VideoCapture(video_name)
 success, frame = cap.read()
