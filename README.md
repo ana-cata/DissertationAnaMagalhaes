@@ -25,4 +25,4 @@ In the Computer_vision_code, we have the script **video_analysis.py** that calac
 Besides, there are two files Trial 2 and Trial 3 that have the .txt file resulting from the analysis of several sections of the zebrafish videos from trial 2 and 3.
 
 ### Analysis_code
-
+In the Analysis_code, there are the three notebooks to analyse the data obtained from the sensors (Data_analysis.ipynb) and from the video (Video_analysis.ipynb), after the acquisition on the bioterium. Besides, the script Sensors_video.ipynb has the code for comparing the results obtained from the sensors and from the video. 
