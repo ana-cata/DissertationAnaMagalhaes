@@ -5,8 +5,6 @@ Ana Catarina Monteiro Magalhães
 # Organization 
 This repository are available all the data acquire by the monitoring system and also the code of the monitoring system. Besides, it contains the code of the posterior data analysis.
 
-The videos acquired during the trial 2 and 3 are available in the following link ().
-
 ### Data_bioterium
 The Data_bioterium directory has the data of the trials 1, 2 and 3, that corresponds to the zebrafish vital signs and water temperature measurenments. 
 
