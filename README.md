@@ -6,7 +6,7 @@ Ana Catarina Monteiro Magalhães
 This repository are available all the data acquire by the monitoring system and also the code of the monitoring system. Besides, it contains the code of the posterior data analysis.
 
 ### Data_bioterium
-The Data_bioterium directory has the data of the trials 1, 2 and 3, that corresponds to the zebrafish vital signs and water temperature measurenments. 
+The Data_bioterium directory has the data of the trials 1 and 2, that corresponds to the zebrafish vital signs and water temperature measurenments. 
 
 ### Arduino_code
 The Arduino_code directory has the file **sensors.ino** that makes the comunitcation between the hardware and the software of the developed monitoring system. 
